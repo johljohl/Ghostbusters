@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ghostbusters 1984</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #000;
+        color: #0f0;
+        font-family: "Courier New", monospace;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        image-rendering: pixelated;
+      }
+
+      #gameContainer {
+        width: 800px;
+        height: 600px;
+        background: #111;
+        border: 3px solid #0f0;
+        position: relative;
+        overflow: hidden;
+      }
+
+      #startScreen,
+      #shopScreen,
+      #mapScreen,
+      #catchScreen,
+      #gameOverScreen {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+      }
+
+      #startScreen.active,
+      #shopScreen.active,
+      #mapScreen.active,
+      #catchScreen.active,
+      #gameOverScreen.active {
+        display: flex;
+      }
+
+      h1 {
+        font-size: 48px;
+        color: #0f0;
+        text-shadow: 0 0 20px #0f0;
+        margin-bottom: 30px;
+        animation: glow 2s ease-in-out infinite;
+      }
+
+      @keyframes glow {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      button {
+        background: #0f0;
+        color: #000;
+        border: none;
+        padding: 15px 30px;
+        font-size: 18px;
+        font-family: "Courier New", monospace;
+        cursor: pointer;
+        margin: 10px;
+        text-transform: uppercase;
+        font-weight: bold;
+        transition: all 0.3s;
+      }
+
+      button:hover {
+        background: #0a0;
+        transform: scale(1.1);
+        box-shadow: 0 0 20px #0f0;
+      }
+
+      #shopScreen .equipment {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin: 20px;
+      }
+
+      .equipment-item {
+        border: 2px solid #0f0;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .equipment-item:hover {
+        background: #0f0;
+        color: #000;
+      }
+
+      .equipment-item.purchased {
+        background: #050;
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      #stats {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 16px;
+        color: #0f0;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 10px;
+        border: 1px solid #0f0;
+      }
+
+      #mapScreen {
+        background: #000;
+      }
+
+      #cityMap {
+        width: 600px;
+        height: 400px;
+        border: 2px solid #0f0;
+        position: relative;
+        background: #111;
+        overflow: hidden;
+      }
+
+      .street-horizontal {
+        position: absolute;
+        width: 100%;
+        height: 40px;
+        background: #333;
+        border-top: 2px solid #555;
+        border-bottom: 2px solid #555;
+      }
+
+      .street-vertical {
+        position: absolute;
+        width: 40px;
+        height: 100%;
+        background: #333;
+        border-left: 2px solid #555;
+        border-right: 2px solid #555;
+      }
+
+      .street-line {
+        position: absolute;
+        background: #ff0;
+      }
+
+      .street-horizontal .street-line {
+        width: 20px;
+        height: 2px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .street-vertical .street-line {
+        width: 2px;
+        height: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .building-block {
+        position: absolute;
+        background: #222;
+        border: 1px solid #444;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+      }
+
+      .building-block::before {
+        content: "";
+        position: absolute;
+        top: 10%;
+        left: 10%;
+        right: 10%;
+        bottom: 20%;
+        background: repeating-linear-gradient(
+            90deg,
+            #ff0 0px,
+            #ff0 3px,
+            transparent 3px,
+            transparent 8px
+          ),
+          repeating-linear-gradient(
+            0deg,
+            #ff0 0px,
+            #ff0 3px,
+            transparent 3px,
+            transparent 8px
+          );
+        opacity: 0.3;
+      }
+
+      .ghost-alert {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background: radial-gradient(circle, #f0f, #808);
+        border-radius: 50%;
+        cursor: pointer;
+        animation: pulse 1s infinite;
+        box-shadow: 0 0 20px #f0f;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.3);
+        }
+      }
+
+      #ectoCar {
+        position: absolute;
+        width: 50px;
+        height: 30px;
+        background: #fff;
+        border: 2px solid #f00;
+        transition: left 0.1s linear, top 0.1s linear, transform 0.2s;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 25px;
+        border-radius: 5px;
+      }
+
+      #ectoCar .car-logo {
+        filter: hue-rotate(90deg);
+      }
+
+      #catchScreen canvas {
+        border: 2px solid #0f0;
+        cursor: crosshair;
+      }
+
+      .ghost {
+        position: absolute;
+        font-size: 30px;
+        animation: float 3s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0) rotate(0deg);
+        }
+        25% {
+          transform: translateY(-20px) rotate(-5deg);
+        }
+        75% {
+          transform: translateY(20px) rotate(5deg);
+        }
+      }
+
+      #protonBeam {
+        position: absolute;
+        width: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #f00, #ff0, #f00);
+        transform-origin: left center;
+        display: none;
+        box-shadow: 0 0 10px #f00;
+      }
+
+      #pkeMeter {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 150px;
+        height: 30px;
+        border: 2px solid #0f0;
+        background: #000;
+      }
+
+      #pkeMeterFill {
+        height: 100%;
+        background: linear-gradient(90deg, #0f0, #ff0, #f00);
+        width: 0%;
+        transition: width 0.3s;
+      }
+
+      .logo-ghost {
+        font-size: 60px;
+        animation: float 2s ease-in-out infinite;
+        display: none;
+      }
+
+      .logo-image {
+        width: 250px;
+        height: 150px;
+        display: block;
+      }
+
+      .logo-image.active {
+        display: block;
+      }
+
+      #finalScore {
+        font-size: 24px;
+        color: #ff0;
+        margin: 20px;
+      }
+
+      #trapButton {
+        position: absolute;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ff0;
+        color: #000;
+        padding: 10px 20px;
+        display: none;
+      }
+
+      #trapButton.visible {
+        display: block;
+        animation: blink 0.5s infinite;
+      }
+
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="gameContainer">
+      <!-- Start Screen -->
+      <div id="startScreen" class="active">
+        <h1>GHOSTBUSTERS</h1>
+        <img
+          class="logo-image"
+          src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyIQV0cqbzmYf6Xw49qmiCgjOBBk0cUAYZnVbUeusAVkfQVCDZ8HObQKDTi4mNgY7NM5U&usqp=CAU"
+          alt="Ghostbusters Logo"
+        />
+        <div class="logo-ghost">👻</div>
+        <button onclick="startGame()">START GAME</button>
+        <p style="margin-top: 20px; color: #0f0">© 1984 ACTIVISION REMAKE</p>
+      </div>
+
+      <!-- Shop Screen -->
+      <div id="shopScreen">
+        <h2 style="color: #0f0; margin-bottom: 20px">
+          GHOSTBUSTERS HQ - EQUIPMENT SHOP
+        </h2>
+        <div id="stats"></div>
+        <div class="equipment">
+          <div class="equipment-item" onclick="buyEquipment('trap', 500)">
+            <h3>Ghost Trap</h3>
+            <p>$500</p>
+            <p>+20% Catch Rate</p>
+          </div>
+          <div class="equipment-item" onclick="buyEquipment('pke', 800)">
+            <h3>PKE Meter</h3>
+            <p>$800</p>
+            <p>Detect ghosts faster</p>
+          </div>
+          <div class="equipment-item" onclick="buyEquipment('storage', 1000)">
+            <h3>Storage Facility</h3>
+            <p>$1000</p>
+            <p>+5 Ghost capacity</p>
+          </div>
+          <div class="equipment-item" onclick="buyEquipment('beam', 1500)">
+            <h3>Proton Pack Upgrade</h3>
+            <p>$1500</p>
+            <p>Stronger beam</p>
+          </div>
+        </div>
+        <button onclick="goToMap()">GO TO CITY MAP</button>
+      </div>
+
+      <!-- Map Screen -->
+      <div id="mapScreen">
+        <h2 style="color: #0f0; margin-bottom: 20px">
+          NEW YORK CITY - GHOST TRACKER
+        </h2>
+        <div id="stats"></div>
+        <div id="cityMap">
+          <div id="ectoCar">
+            <span class="car-logo">🚗</span>
+          </div>
+        </div>
+        <button onclick="goToShop()">RETURN TO HQ</button>
+        <p id="pkLevel" style="margin-top: 10px">
+          PK ENERGY: <span>1000</span>
+        </p>
+      </div>
+
+      <!-- Catch Screen -->
+      <div id="catchScreen">
+        <h2 style="color: #0f0; margin-bottom: 20px">CATCH THE GHOST!</h2>
+        <canvas id="catchCanvas" width="600" height="400"></canvas>
+        <div id="pkeMeter">
+          <div id="pkeMeterFill"></div>
+        </div>
+        <button id="trapButton" onclick="deployTrap()">DEPLOY TRAP!</button>
+        <p style="margin-top: 10px">Weaken the ghost, then deploy the trap!</p>
+        <button onclick="exitCatch()">ESCAPE</button>
+      </div>
+
+      <!-- Game Over Screen -->
+      <div id="gameOverScreen">
+        <h1>GAME OVER</h1>
+        <img
+          class="logo-image"
+          src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyIQV0cqbzmYf6Xw49qmiCgjOBBk0cUAYZnVbUeusAVkfQVCDZ8HObQKDTi4mNgY7NM5U&usqp=CAU"
+          alt="Ghostbusters Logo"
+        />
+        <div class="logo-ghost">👻</div>
+        <div id="finalScore"></div>
+        <button onclick="restartGame()">PLAY AGAIN</button>
+      </div>
+    </div>
+
+    <script>
+      // Game State
+      let gameState = {
+        money: 5000,
+        ghosts: 0,
+        equipment: {
+          trap: false,
+          pke: false,
+          storage: false,
+          beam: false,
+        },
+        maxGhosts: 10,
+        catchRate: 30,
+        pkEnergy: 1000,
+        carPosition: { x: 300, y: 200 },
+      };
+
+      let currentScreen = "start";
+      let ghostAlerts = [];
+      let catchingGhost = null;
+      let mouseDown = false;
+      let beamTarget = null;
+      let ghostTrap = null;
+
+      // Sound effects (using Web Audio API)
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+
+      function playSound(frequency, duration) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = frequency;
+        oscillator.type = "square";
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + duration
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration);
+      }
+
+      function startGame() {
+        playSound(440, 0.1);
+        showScreen("shop");
+        updateStats();
+      }
+
+      function showScreen(screen) {
+        document.querySelectorAll("#gameContainer > div").forEach((div) => {
+          div.classList.remove("active");
+        });
+        document.getElementById(screen + "Screen").classList.add("active");
+        currentScreen = screen;
+      }
+
+      function updateStats() {
+        const statsElements = document.querySelectorAll("#stats");
+        statsElements.forEach((el) => {
+          el.innerHTML = `
+                    <div>MONEY: $${gameState.money}</div>
+                    <div>GHOSTS: ${gameState.ghosts}/${gameState.maxGhosts}</div>
+                    <div>CATCH RATE: ${gameState.catchRate}%</div>
+                `;
+        });
+      }
+
+      function buyEquipment(type, cost) {
+        if (gameState.money >= cost && !gameState.equipment[type]) {
+          playSound(880, 0.1);
+          gameState.money -= cost;
+          gameState.equipment[type] = true;
+
+          // Apply equipment effects
+          switch (type) {
+            case "trap":
+              gameState.catchRate += 20;
+              break;
+            case "storage":
+              gameState.maxGhosts += 5;
+              break;
+            case "beam":
+              gameState.catchRate += 15;
+              break;
+          }
+
+          updateStats();
+
+          // Mark as purchased
+          event.target.classList.add("purchased");
+        } else {
+          playSound(220, 0.2);
+        }
+      }
+
+      function goToMap() {
+        showScreen("map");
+        startMapGame();
+      }
+
+      function goToShop() {
+        showScreen("shop");
+        updateStats();
+      }
+
+      function startMapGame() {
+        updateStats();
+        createCityStreets();
+        generateGhosts();
+        updateCarPosition();
+
+        // Update PK Energy
+        const pkInterval = setInterval(() => {
+          if (currentScreen !== "map") {
+            clearInterval(pkInterval);
+            return;
+          }
+
+          gameState.pkEnergy -= 10;
+          document.querySelector("#pkLevel span").textContent =
+            gameState.pkEnergy;
+
+          if (gameState.pkEnergy <= 0) {
+            gameOver();
+            clearInterval(pkInterval);
+          }
+
+          // Random new ghost
+          if (Math.random() < 0.3 && ghostAlerts.length < 5) {
+            generateGhosts();
+          }
+        }, 1000);
+      }
+
+      function createCityStreets() {
+        const map = document.getElementById("cityMap");
+
+        // Clear existing streets and buildings
+        map
+          .querySelectorAll(
+            ".street-horizontal, .street-vertical, .building-block"
+          )
+          .forEach((el) => el.remove());
+
+        // Create horizontal streets (3 streets)
+        const horizontalPositions = [80, 200, 320];
+        horizontalPositions.forEach((y) => {
+          const street = document.createElement("div");
+          street.className = "street-horizontal";
+          street.style.top = y + "px";
+
+          // Add street lines (dashes)
+          for (let x = 10; x < 600; x += 40) {
+            const line = document.createElement("div");
+            line.className = "street-line";
+            line.style.left = x + "px";
+            street.appendChild(line);
+          }
+
+          map.appendChild(street);
+        });
+
+        // Create vertical streets (4 streets)
+        const verticalPositions = [100, 230, 360, 490];
+        verticalPositions.forEach((x) => {
+          const street = document.createElement("div");
+          street.className = "street-vertical";
+          street.style.left = x + "px";
+
+          // Add street lines (dashes)
+          for (let y = 10; y < 400; y += 40) {
+            const line = document.createElement("div");
+            line.className = "street-line";
+            line.style.top = y + "px";
+            street.appendChild(line);
+          }
+
+          map.appendChild(street);
+        });
+
+        // Create building blocks between streets
+        const buildingAreas = [
+          { x: 0, y: 0, w: 100, h: 80 },
+          { x: 140, y: 0, w: 90, h: 80 },
+          { x: 270, y: 0, w: 90, h: 80 },
+          { x: 400, y: 0, w: 90, h: 80 },
+          { x: 530, y: 0, w: 70, h: 80 },
+
+          { x: 0, y: 120, w: 100, h: 80 },
+          { x: 140, y: 120, w: 90, h: 80 },
+          { x: 270, y: 120, w: 90, h: 80 },
+          { x: 400, y: 120, w: 90, h: 80 },
+          { x: 530, y: 120, w: 70, h: 80 },
+
+          { x: 0, y: 240, w: 100, h: 80 },
+          { x: 140, y: 240, w: 90, h: 80 },
+          { x: 270, y: 240, w: 90, h: 80 },
+          { x: 400, y: 240, w: 90, h: 80 },
+          { x: 530, y: 240, w: 70, h: 80 },
+
+          { x: 0, y: 360, w: 100, h: 40 },
+          { x: 140, y: 360, w: 90, h: 40 },
+          { x: 270, y: 360, w: 90, h: 40 },
+          { x: 400, y: 360, w: 90, h: 40 },
+          { x: 530, y: 360, w: 70, h: 40 },
+        ];
+
+        buildingAreas.forEach((area) => {
+          const building = document.createElement("div");
+          building.className = "building-block";
+          building.style.left = area.x + "px";
+          building.style.top = area.y + "px";
+          building.style.width = area.w + "px";
+          building.style.height = area.h + "px";
+          map.appendChild(building);
+        });
+      }
+
+      function generateGhosts() {
+        const map = document.getElementById("cityMap");
+
+        // Clear old ghosts
+        document.querySelectorAll(".ghost-alert").forEach((g) => g.remove());
+        ghostAlerts = [];
+
+        // Possible positions on streets (intersections and mid-blocks)
+        const streetPositions = [
+          // Intersections
+          { x: 100, y: 80 },
+          { x: 230, y: 80 },
+          { x: 360, y: 80 },
+          { x: 490, y: 80 },
+          { x: 100, y: 200 },
+          { x: 230, y: 200 },
+          { x: 360, y: 200 },
+          { x: 490, y: 200 },
+          { x: 100, y: 320 },
+          { x: 230, y: 320 },
+          { x: 360, y: 320 },
+          { x: 490, y: 320 },
+          // Mid-street positions
+          { x: 50, y: 80 },
+          { x: 165, y: 80 },
+          { x: 295, y: 80 },
+          { x: 425, y: 80 },
+          { x: 545, y: 80 },
+          { x: 50, y: 200 },
+          { x: 165, y: 200 },
+          { x: 295, y: 200 },
+          { x: 425, y: 200 },
+          { x: 545, y: 200 },
+          { x: 50, y: 320 },
+          { x: 165, y: 320 },
+          { x: 295, y: 320 },
+          { x: 425, y: 320 },
+          { x: 545, y: 320 },
+        ];
+
+        // Generate new ghosts at random street positions
+        const numGhosts = Math.floor(Math.random() * 3) + 1;
+        const usedPositions = [];
+
+        for (let i = 0; i < numGhosts; i++) {
+          let position;
+          do {
+            position =
+              streetPositions[
+                Math.floor(Math.random() * streetPositions.length)
+              ];
+          } while (usedPositions.includes(position));
+
+          usedPositions.push(position);
+
+          const ghost = document.createElement("div");
+          ghost.className = "ghost-alert";
+          ghost.style.left = position.x - 15 + "px";
+          ghost.style.top = position.y - 15 + "px";
+          ghost.onclick = () => moveToGhost(ghost);
+          map.appendChild(ghost);
+          ghostAlerts.push(ghost);
+        }
+      }
+
+      function moveToGhost(ghost) {
+        const car = document.getElementById("ectoCar");
+        const ghostRect = ghost.getBoundingClientRect();
+        const mapRect = document
+          .getElementById("cityMap")
+          .getBoundingClientRect();
+
+        const targetX = ghostRect.left - mapRect.left + 15;
+        const targetY = ghostRect.top - mapRect.top + 15;
+
+        // Find path along streets
+        const path = findStreetPath(
+          gameState.carPosition.x,
+          gameState.carPosition.y,
+          targetX,
+          targetY
+        );
+
+        // Animate car along path
+        let pathIndex = 0;
+        const moveInterval = setInterval(() => {
+          if (pathIndex >= path.length) {
+            clearInterval(moveInterval);
+            // Remove ghost and start catch sequence
+            setTimeout(() => {
+              ghost.remove();
+              ghostAlerts = ghostAlerts.filter((g) => g !== ghost);
+              startCatchSequence();
+            }, 200);
+            return;
+          }
+
+          const point = path[pathIndex];
+          gameState.carPosition.x = point.x;
+          gameState.carPosition.y = point.y;
+
+          car.style.left = point.x - 20 + "px";
+          car.style.top = point.y - 10 + "px";
+
+          // Rotate car based on direction
+          if (pathIndex > 0) {
+            const prevPoint = path[pathIndex - 1];
+            const dx = point.x - prevPoint.x;
+            const dy = point.y - prevPoint.y;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+              car.style.transform = dx > 0 ? "rotate(0deg)" : "rotate(180deg)";
+            } else {
+              car.style.transform = dy > 0 ? "rotate(90deg)" : "rotate(-90deg)";
+            }
+          }
+
+          pathIndex++;
+          playSound(220 + Math.random() * 100, 0.05);
+        }, 100);
+      }
+
+      function findStreetPath(startX, startY, endX, endY) {
+        const path = [];
+
+        // Define street grid points
+        const horizontalStreets = [80, 200, 320];
+        const verticalStreets = [100, 230, 360, 490];
+
+        // Find nearest street intersection for start
+        let currentX = findNearestStreet(startX, verticalStreets);
+        let currentY = findNearestStreet(startY, horizontalStreets);
+
+        // Find nearest street intersection for end
+        const targetX = findNearestStreet(endX, verticalStreets);
+        const targetY = findNearestStreet(endY, horizontalStreets);
+
+        // Create path from current position to nearest intersection
+        if (startX !== currentX || startY !== currentY) {
+          path.push({ x: currentX, y: currentY });
+        }
+
+        // Simple pathfinding: first move horizontally, then vertically
+        // Move horizontally along current street
+        if (currentX !== targetX) {
+          const direction = targetX > currentX ? 1 : -1;
+          let x = currentX;
+
+          while (x !== targetX) {
+            x += direction * 10;
+
+            // Check if we've reached a vertical street
+            for (let street of verticalStreets) {
+              if (Math.abs(x - street) < 5) {
+                x = street;
+                path.push({ x: x, y: currentY });
+
+                if (x === targetX) {
+                  break;
+                }
+              }
+            }
+
+            // Prevent infinite loop
+            if (Math.abs(x - targetX) < 10) {
+              x = targetX;
+              path.push({ x: targetX, y: currentY });
+              break;
+            }
+          }
+        }
+
+        // Move vertically along target street
+        if (currentY !== targetY) {
+          const direction = targetY > currentY ? 1 : -1;
+          let y = currentY;
+
+          while (y !== targetY) {
+            y += direction * 10;
+
+            // Check if we've reached a horizontal street
+            for (let street of horizontalStreets) {
+              if (Math.abs(y - street) < 5) {
+                y = street;
+                path.push({ x: targetX, y: y });
+
+                if (y === targetY) {
+                  break;
+                }
+              }
+            }
+
+            // Prevent infinite loop
+            if (Math.abs(y - targetY) < 10) {
+              y = targetY;
+              path.push({ x: targetX, y: targetY });
+              break;
+            }
+          }
+        }
+
+        // Add final position if not already there
+        if (
+          path.length === 0 ||
+          path[path.length - 1].x !== endX ||
+          path[path.length - 1].y !== endY
+        ) {
+          path.push({ x: endX, y: endY });
+        }
+
+        return path;
+      }
+
+      function findNearestStreet(position, streets) {
+        let nearest = streets[0];
+        let minDistance = Math.abs(position - streets[0]);
+
+        for (let street of streets) {
+          const distance = Math.abs(position - street);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearest = street;
+          }
+        }
+
+        return nearest;
+      }
+
+      function updateCarPosition() {
+        const car = document.getElementById("ectoCar");
+        // Start car at an intersection
+        gameState.carPosition = { x: 100, y: 80 };
+        car.style.left = gameState.carPosition.x - 20 + "px";
+        car.style.top = gameState.carPosition.y - 10 + "px";
+      }
+
+      function startCatchSequence() {
+        showScreen("catch");
+        const canvas = document.getElementById("catchCanvas");
+        const ctx = canvas.getContext("2d");
+
+        catchingGhost = {
+          x: Math.random() * 500 + 50,
+          y: 100,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 2,
+          health: 100,
+          trapped: false,
+          pullStrength: 0,
+        };
+
+        // Ghost trap position (center bottom)
+        ghostTrap = {
+          x: 300,
+          y: 350,
+          width: 80,
+          height: 40,
+          open: false,
+          deployed: false,
+        };
+
+        // Window blink timer for slow blinking effect
+        let windowBlinkTimer = 0;
+
+        animateCatch(ctx, windowBlinkTimer);
+
+        canvas.addEventListener("mousedown", startBeam);
+        canvas.addEventListener("mouseup", stopBeam);
+        canvas.addEventListener("mousemove", updateBeam);
+      }
+
+      function animateCatch(ctx, windowBlinkTimer = 0) {
+        if (currentScreen !== "catch") return;
+
+        // Increment blink timer
+        windowBlinkTimer++;
+
+        ctx.clearRect(0, 0, 600, 400);
+
+        // Draw night sky gradient
+        const skyGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        skyGradient.addColorStop(0, "#000033");
+        skyGradient.addColorStop(0.7, "#001");
+        skyGradient.addColorStop(1, "#111");
+        ctx.fillStyle = skyGradient;
+        ctx.fillRect(0, 0, 600, 400);
+
+        // Draw stars
+        ctx.fillStyle = "#fff";
+        for (let i = 0; i < 30; i++) {
+          const x = (i * 73) % 600;
+          const y = (i * 37) % 150;
+          const size = (i % 3) * 0.5 + 0.5;
+          ctx.fillRect(x, y, size, size);
+        }
+
+        // Draw skyline silhouettes
+        ctx.fillStyle = "#000";
+
+        // Background buildings (tallest)
+        const bgBuildings = [
+          { x: 0, w: 80, h: 250 },
+          { x: 85, w: 60, h: 280 },
+          { x: 150, w: 70, h: 220 },
+          { x: 225, w: 90, h: 300 },
+          { x: 320, w: 65, h: 260 },
+          { x: 390, w: 75, h: 290 },
+          { x: 470, w: 60, h: 240 },
+          { x: 535, w: 65, h: 270 },
+        ];
+
+        bgBuildings.forEach((b) => {
+          ctx.fillRect(b.x, 400 - b.h, b.w, b.h);
+
+          // Add antenna/spire on some buildings
+          if (b.h > 260) {
+            ctx.fillRect(b.x + b.w / 2 - 2, 400 - b.h - 20, 4, 20);
+          }
+        });
+
+        // Draw building windows (lit up) with slow blinking
+        ctx.fillStyle = "#ff0";
+        bgBuildings.forEach((b, buildingIndex) => {
+          for (let wx = b.x + 5; wx < b.x + b.w - 5; wx += 12) {
+            for (let wy = 400 - b.h + 10; wy < 390; wy += 20) {
+              // Base pattern for most windows (always on)
+              const basePattern = (wx + wy + buildingIndex * 7) % 3 !== 0;
+
+              // Some windows blink slowly (about 10% of windows)
+              const isBlinkingWindow = (wx * wy) % 23 === 0;
+              const blinkPhase =
+                Math.sin(windowBlinkTimer * 0.02 + wx + wy) > 0;
+
+              if (basePattern && (!isBlinkingWindow || blinkPhase)) {
+                ctx.fillRect(wx, wy, 6, 10);
+              }
+            }
+          }
+        });
+
+        // Foreground buildings (shorter, darker)
+        ctx.fillStyle = "#111";
+        const fgBuildings = [
+          { x: 40, w: 70, h: 150 },
+          { x: 180, w: 80, h: 140 },
+          { x: 340, w: 75, h: 160 },
+          { x: 490, w: 85, h: 145 },
+        ];
+
+        fgBuildings.forEach((b) => {
+          ctx.fillRect(b.x, 400 - b.h, b.w, b.h);
+        });
+
+        // Foreground building windows (dimmer) with slow blinking
+        ctx.fillStyle = "#990";
+        fgBuildings.forEach((b, buildingIndex) => {
+          for (let wx = b.x + 5; wx < b.x + b.w - 5; wx += 15) {
+            for (let wy = 400 - b.h + 10; wy < 390; wy += 20) {
+              // Base pattern for most windows
+              const basePattern = (wx + wy + buildingIndex * 11) % 5 !== 0;
+
+              // Some windows blink slowly
+              const isBlinkingWindow = (wx * wy) % 17 === 0;
+              const blinkPhase =
+                Math.sin(windowBlinkTimer * 0.015 + wx * 2 + wy) > 0;
+
+              if (basePattern && (!isBlinkingWindow || blinkPhase)) {
+                ctx.fillRect(wx, wy, 8, 10);
+              }
+            }
+          }
+        });
+
+        // Draw ground/street
+        ctx.fillStyle = "#222";
+        ctx.fillRect(0, 380, 600, 20);
+
+        // Draw ghost trap if deployed
+        if (ghostTrap && ghostTrap.deployed) {
+          // Trap base
+          ctx.fillStyle = "#444";
+          ctx.fillRect(
+            ghostTrap.x - ghostTrap.width / 2,
+            ghostTrap.y,
+            ghostTrap.width,
+            ghostTrap.height
+          );
+
+          // Trap doors and light
+          if (ghostTrap.open) {
+            // Open trap doors
+            ctx.fillStyle = "#222";
+            ctx.fillRect(
+              ghostTrap.x - ghostTrap.width / 2,
+              ghostTrap.y,
+              ghostTrap.width / 2 - 5,
+              ghostTrap.height
+            );
+            ctx.fillRect(
+              ghostTrap.x + 5,
+              ghostTrap.y,
+              ghostTrap.width / 2 - 5,
+              ghostTrap.height
+            );
+
+            // Light beam from trap
+            const gradient = ctx.createLinearGradient(
+              ghostTrap.x,
+              ghostTrap.y,
+              ghostTrap.x,
+              0
+            );
+            gradient.addColorStop(0, "rgba(255, 255, 0, 0.8)");
+            gradient.addColorStop(1, "rgba(255, 255, 0, 0)");
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.moveTo(ghostTrap.x - 30, ghostTrap.y);
+            ctx.lineTo(ghostTrap.x - 60, 0);
+            ctx.lineTo(ghostTrap.x + 60, 0);
+            ctx.lineTo(ghostTrap.x + 30, ghostTrap.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // Pull ghost towards trap
+            if (catchingGhost && !catchingGhost.trapped) {
+              const dx = ghostTrap.x - catchingGhost.x;
+              const dy = ghostTrap.y - catchingGhost.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+
+              if (catchingGhost.health < 30) {
+                // Strong pull when ghost is weak
+                catchingGhost.x += dx * 0.05;
+                catchingGhost.y += dy * 0.05;
+
+                // Check if ghost is captured
+                if (distance < 50) {
+                  catchingGhost.trapped = true;
+                  setTimeout(() => ghostCaptured(), 500);
+                }
+              } else {
+                // Weak pull when ghost is strong
+                catchingGhost.x += dx * 0.01;
+                catchingGhost.y += dy * 0.01;
+              }
+            }
+          } else {
+            // Closed trap
+            ctx.fillStyle = "#666";
+            ctx.fillRect(
+              ghostTrap.x - ghostTrap.width / 2 + 5,
+              ghostTrap.y - 5,
+              ghostTrap.width - 10,
+              5
+            );
+          }
+
+          // Trap indicator lights
+          ctx.fillStyle = ghostTrap.open ? "#0f0" : "#f00";
+          ctx.beginPath();
+          ctx.arc(ghostTrap.x - 30, ghostTrap.y + 20, 3, 0, Math.PI * 2);
+          ctx.arc(ghostTrap.x + 30, ghostTrap.y + 20, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Update ghost position
+        if (catchingGhost && !catchingGhost.trapped) {
+          catchingGhost.x += catchingGhost.vx;
+          catchingGhost.y += catchingGhost.vy;
+
+          // Bounce off walls
+          if (catchingGhost.x < 30 || catchingGhost.x > 570)
+            catchingGhost.vx *= -1;
+          if (catchingGhost.y < 30 || catchingGhost.y > 320)
+            catchingGhost.vy *= -1;
+
+          // Draw Slimer
+          ctx.save();
+
+          // Make transparent when weak
+          if (catchingGhost.health < 30) {
+            ctx.globalAlpha = 0.7;
+          }
+
+          const size = 30 * (0.7 + catchingGhost.health / 300);
+
+          // Slimer's body (green blob)
+          ctx.fillStyle = "#0f0";
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = "#0f0";
+
+          // Main body - oval shape
+          ctx.beginPath();
+          ctx.ellipse(
+            catchingGhost.x,
+            catchingGhost.y,
+            size * 1.2,
+            size,
+            0,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          // Arms (small blobs on sides)
+          ctx.beginPath();
+          ctx.ellipse(
+            catchingGhost.x - size,
+            catchingGhost.y,
+            size * 0.4,
+            size * 0.3,
+            -0.5,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(
+            catchingGhost.x + size,
+            catchingGhost.y,
+            size * 0.4,
+            size * 0.3,
+            0.5,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          // Lower body trail (dripping effect)
+          ctx.beginPath();
+          ctx.ellipse(
+            catchingGhost.x,
+            catchingGhost.y + size * 0.8,
+            size * 0.8,
+            size * 0.4,
+            0,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          // Draw slime drips
+          ctx.fillStyle = "#0a0";
+          for (let i = 0; i < 3; i++) {
+            const dripX = catchingGhost.x + (i - 1) * size * 0.5;
+            const dripY =
+              catchingGhost.y + size + Math.sin(Date.now() * 0.003 + i) * 5;
+            ctx.beginPath();
+            ctx.ellipse(
+              dripX,
+              dripY,
+              size * 0.1,
+              size * 0.2,
+              0,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+          }
+
+          ctx.shadowBlur = 0;
+
+          // Eyes (red/pink)
+          ctx.fillStyle = "#f00";
+          ctx.beginPath();
+          ctx.arc(
+            catchingGhost.x - size * 0.3,
+            catchingGhost.y - size * 0.2,
+            size * 0.15,
+            0,
+            Math.PI * 2
+          );
+          ctx.arc(
+            catchingGhost.x + size * 0.3,
+            catchingGhost.y - size * 0.2,
+            size * 0.15,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          // Pupils
+          ctx.fillStyle = "#000";
+          ctx.beginPath();
+          ctx.arc(
+            catchingGhost.x - size * 0.3,
+            catchingGhost.y - size * 0.2,
+            size * 0.08,
+            0,
+            Math.PI * 2
+          );
+          ctx.arc(
+            catchingGhost.x + size * 0.3,
+            catchingGhost.y - size * 0.2,
+            size * 0.08,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          // Mouth (big and hungry)
+          ctx.strokeStyle = "#000";
+          ctx.lineWidth = 2;
+          ctx.fillStyle = "#000";
+          ctx.beginPath();
+          ctx.ellipse(
+            catchingGhost.x,
+            catchingGhost.y + size * 0.3,
+            size * 0.5,
+            size * 0.25,
+            0,
+            0,
+            Math.PI
+          );
+          ctx.fill();
+
+          // Tongue
+          ctx.fillStyle = "#f0a";
+          ctx.beginPath();
+          ctx.ellipse(
+            catchingGhost.x,
+            catchingGhost.y + size * 0.4,
+            size * 0.3,
+            size * 0.1,
+            0,
+            0,
+            Math.PI
+          );
+          ctx.fill();
+
+          ctx.restore();
+
+          // Draw proton beam if active
+          if (mouseDown && beamTarget) {
+            // Draw multiple beam lines for effect
+            ctx.strokeStyle = "#ff0";
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "#ff0";
+
+            // Main beam
+            ctx.beginPath();
+            ctx.moveTo(50, 380);
+            ctx.lineTo(beamTarget.x, beamTarget.y);
+            ctx.stroke();
+
+            // Electric effect lines
+            ctx.strokeStyle = "#f0f";
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 3; i++) {
+              ctx.beginPath();
+              ctx.moveTo(50, 380);
+
+              // Add some random wiggle to the beam
+              const midX =
+                50 + (beamTarget.x - 50) * 0.5 + (Math.random() - 0.5) * 30;
+              const midY =
+                380 + (beamTarget.y - 380) * 0.5 + (Math.random() - 0.5) * 30;
+
+              ctx.quadraticCurveTo(midX, midY, beamTarget.x, beamTarget.y);
+              ctx.stroke();
+            }
+
+            // Draw impact effect if hitting ghost
+            const distance = Math.sqrt(
+              Math.pow(beamTarget.x - catchingGhost.x, 2) +
+                Math.pow(beamTarget.y - catchingGhost.y, 2)
+            );
+
+            if (distance < 50) {
+              ctx.strokeStyle = "#0ff";
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.arc(catchingGhost.x, catchingGhost.y, 50, 0, Math.PI * 2);
+              ctx.stroke();
+
+              // Draw sparks
+              ctx.fillStyle = "#fff";
+              for (let i = 0; i < 5; i++) {
+                const sparkX = catchingGhost.x + (Math.random() - 0.5) * 60;
+                const sparkY = catchingGhost.y + (Math.random() - 0.5) * 60;
+                ctx.fillRect(sparkX, sparkY, 3, 3);
+              }
+            }
+
+            ctx.shadowBlur = 0;
+          }
+
+          // Update PKE meter
+          document.getElementById("pkeMeterFill").style.width =
+            catchingGhost.health + "%";
+
+          // Show trap button when ghost is weak
+          const trapButton = document.getElementById("trapButton");
+          if (catchingGhost.health < 30 && !ghostTrap.deployed) {
+            trapButton.classList.add("visible");
+          } else if (ghostTrap.deployed) {
+            trapButton.classList.remove("visible");
+          }
+        }
+
+        requestAnimationFrame(() => animateCatch(ctx, windowBlinkTimer));
+      }
+
+      function deployTrap() {
+        if (catchingGhost && catchingGhost.health < 30) {
+          playSound(220, 0.3);
+          ghostTrap.deployed = true;
+
+          setTimeout(() => {
+            ghostTrap.open = true;
+            playSound(440, 0.5);
+          }, 500);
+        }
+      }
+
+      function startBeam(e) {
+        mouseDown = true;
+        playSound(110, 0.1);
+      }
+
+      function stopBeam() {
+        mouseDown = false;
+        beamTarget = null;
+      }
+
+      function updateBeam(e) {
+        if (!catchingGhost) return;
+
+        const canvas = document.getElementById("catchCanvas");
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Update beam target
+        beamTarget = { x: x, y: y };
+
+        if (!mouseDown) return;
+
+        // Check if hitting ghost
+        const distance = Math.sqrt(
+          Math.pow(x - catchingGhost.x, 2) + Math.pow(y - catchingGhost.y, 2)
+        );
+
+        if (distance < 50) {
+          catchingGhost.health -= 2;
+          playSound(440, 0.05);
+
+          // Slow down ghost when hit
+          catchingGhost.vx *= 0.95;
+          catchingGhost.vy *= 0.95;
+
+          // Pull ghost down slightly when weak
+          if (catchingGhost.health < 50) {
+            catchingGhost.vy += 0.2;
+          }
+        }
+      }
+
+      function ghostCaptured() {
+        playSound(880, 0.3);
+        gameState.ghosts++;
+        gameState.money += 500;
+
+        if (gameState.ghosts >= gameState.maxGhosts) {
+          gameOver();
+        } else {
+          alert("Ghost captured! +$500");
+          exitCatch();
+        }
+      }
+
+      function exitCatch() {
+        catchingGhost = null;
+        ghostTrap = null;
+        document.getElementById("trapButton").classList.remove("visible");
+        showScreen("map");
+        updateStats();
+      }
+
+      function gameOver() {
+        document.getElementById("finalScore").innerHTML = `
+                <p>FINAL SCORE</p>
+                <p>Money Earned: ${gameState.money}</p>
+                <p>Ghosts Caught: ${gameState.ghosts}</p>
+            `;
+        showScreen("gameOver");
+      }
+
+      function restartGame() {
+        gameState = {
+          money: 5000,
+          ghosts: 0,
+          equipment: {
+            trap: false,
+            pke: false,
+            storage: false,
+            beam: false,
+          },
+          maxGhosts: 10,
+          catchRate: 30,
+          pkEnergy: 1000,
+          carPosition: { x: 300, y: 200 },
+        };
+
+        // Reset purchased items
+        document.querySelectorAll(".purchased").forEach((el) => {
+          el.classList.remove("purchased");
+        });
+
+        showScreen("start");
+      }
+    </script>
+  </body>
+</html>
