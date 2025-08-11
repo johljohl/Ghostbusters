@@ -214,11 +214,35 @@
         position: absolute;
         width: 30px;
         height: 30px;
-        background: radial-gradient(circle, #f0f, #808);
         border-radius: 50%;
         cursor: pointer;
         animation: pulse 1s infinite;
+      }
+
+      .ghost-alert.easy {
+        background: radial-gradient(circle, #0f0, #080);
+        box-shadow: 0 0 20px #0f0;
+      }
+
+      .ghost-alert.medium {
+        background: radial-gradient(circle, #00f, #008);
+        box-shadow: 0 0 20px #00f;
+      }
+
+      .ghost-alert.hard {
+        background: radial-gradient(circle, #f0f, #808);
         box-shadow: 0 0 20px #f0f;
+      }
+
+      .ghost-alert.veryhard {
+        background: radial-gradient(circle, #f00, #800);
+        box-shadow: 0 0 20px #f00;
+      }
+
+      .ghost-alert.legendary {
+        background: radial-gradient(circle, #fff, #888);
+        box-shadow: 0 0 30px #fff;
+        animation: pulse 0.5s infinite;
       }
 
       @keyframes pulse {
@@ -462,6 +486,60 @@
       let mouseDown = false;
       let beamTarget = null;
       let ghostTrap = null;
+
+      // Ghost types with different difficulties and rewards
+      const ghostTypes = [
+        {
+          name: "Slimer",
+          color: "#0f0",
+          shadowColor: "#0f0",
+          health: 100,
+          speed: 4,
+          reward: 500,
+          difficulty: "Easy",
+          eyeColor: "#f00",
+        },
+        {
+          name: "Blue Phantom",
+          color: "#00f",
+          shadowColor: "#00f",
+          health: 150,
+          speed: 5,
+          reward: 800,
+          difficulty: "Medium",
+          eyeColor: "#fff",
+        },
+        {
+          name: "Shadow Specter",
+          color: "#808",
+          shadowColor: "#f0f",
+          health: 200,
+          speed: 6,
+          reward: 1200,
+          difficulty: "Hard",
+          eyeColor: "#ff0",
+        },
+        {
+          name: "Fire Demon",
+          color: "#f00",
+          shadowColor: "#fa0",
+          health: 250,
+          speed: 7,
+          reward: 1800,
+          difficulty: "Very Hard",
+          eyeColor: "#0ff",
+        },
+        {
+          name: "Ancient Spirit",
+          color: "#fff",
+          shadowColor: "#fff",
+          health: 300,
+          speed: 8,
+          reward: 2500,
+          difficulty: "Legendary",
+          eyeColor: "#000",
+        },
+      ];
 
       // Sound effects (using Web Audio API)
       const audioContext = new (window.AudioContext ||
@@ -718,11 +796,33 @@
 
           usedPositions.push(position);
 
+          // Choose ghost type based on probability
+          let ghostType;
+          const rand = Math.random();
+          if (rand < 0.4) {
+            ghostType = ghostTypes[0]; // 40% Slimer
+          } else if (rand < 0.65) {
+            ghostType = ghostTypes[1]; // 25% Blue Phantom
+          } else if (rand < 0.85) {
+            ghostType = ghostTypes[2]; // 20% Shadow Specter
+          } else if (rand < 0.95) {
+            ghostType = ghostTypes[3]; // 10% Fire Demon
+          } else {
+            ghostType = ghostTypes[4]; // 5% Ancient Spirit
+          }
+
           const ghost = document.createElement("div");
-          ghost.className = "ghost-alert";
+          ghost.className =
+            "ghost-alert " +
+            ghostType.difficulty.toLowerCase().replace(" ", "");
           ghost.style.left = position.x - 15 + "px";
           ghost.style.top = position.y - 15 + "px";
+          ghost.dataset.ghostType = JSON.stringify(ghostType);
           ghost.onclick = () => moveToGhost(ghost);
+
+          // Add tooltip to show ghost type and reward
+          ghost.title = `${ghostType.name} - ${ghostType.reward}`;
+
           map.appendChild(ghost);
           ghostAlerts.push(ghost);
         }
@@ -737,6 +837,10 @@
 
         const targetX = ghostRect.left - mapRect.left + 15;
         const targetY = ghostRect.top - mapRect.top + 15;
+
+        // Store the ghost type for the catch sequence
+        const ghostType = JSON.parse(ghost.dataset.ghostType);
+        window.currentGhostType = ghostType;
 
         // Find path along streets
         const path = findStreetPath(
@@ -904,14 +1008,19 @@
         const canvas = document.getElementById("catchCanvas");
         const ctx = canvas.getContext("2d");
 
+        // Get the ghost type from the stored data
+        const ghostType = window.currentGhostType || ghostTypes[0];
+
         catchingGhost = {
           x: Math.random() * 500 + 50,
           y: 100,
-          vx: (Math.random() - 0.5) * 4,
-          vy: (Math.random() - 0.5) * 2,
-          health: 100,
+          vx: (Math.random() - 0.5) * ghostType.speed,
+          vy: (Math.random() - 0.5) * (ghostType.speed / 2),
+          health: ghostType.health,
+          maxHealth: ghostType.health,
           trapped: false,
           pullStrength: 0,
+          type: ghostType,
         };
 
         // Ghost trap position (center bottom)
@@ -1092,7 +1201,9 @@
               const dy = ghostTrap.y - catchingGhost.y;
               const distance = Math.sqrt(dx * dx + dy * dy);
 
-              if (catchingGhost.health < 30) {
+              const weakThreshold = catchingGhost.maxHealth * 0.3;
+
+              if (catchingGhost.health < weakThreshold) {
                 // Strong pull when ghost is weak
                 catchingGhost.x += dx * 0.05;
                 catchingGhost.y += dy * 0.05;
@@ -1138,20 +1249,22 @@
           if (catchingGhost.y < 30 || catchingGhost.y > 320)
             catchingGhost.vy *= -1;
 
-          // Draw Slimer
+          // Draw ghost based on type
           ctx.save();
 
           // Make transparent when weak
-          if (catchingGhost.health < 30) {
+          if (catchingGhost.health < catchingGhost.maxHealth * 0.3) {
             ctx.globalAlpha = 0.7;
           }
 
-          const size = 30 * (0.7 + catchingGhost.health / 300);
+          const size =
+            30 * (0.7 + catchingGhost.health / (catchingGhost.maxHealth * 1.5));
+          const ghostType = catchingGhost.type;
 
-          // Slimer's body (green blob)
-          ctx.fillStyle = "#0f0";
+          // Ghost body
+          ctx.fillStyle = ghostType.color;
           ctx.shadowBlur = 20;
-          ctx.shadowColor = "#0f0";
+          ctx.shadowColor = ghostType.shadowColor;
 
           // Main body - oval shape
           ctx.beginPath();
@@ -1190,7 +1303,7 @@
           );
           ctx.fill();
 
-          // Lower body trail (dripping effect)
+          // Lower body trail (dripping/floating effect)
           ctx.beginPath();
           ctx.ellipse(
             catchingGhost.x,
@@ -1203,8 +1316,9 @@
           );
           ctx.fill();
 
-          // Draw slime drips
-          ctx.fillStyle = "#0a0";
+          // Ghost trail/drips
+          ctx.fillStyle = ghostType.color;
+          ctx.globalAlpha *= 0.7;
           for (let i = 0; i < 3; i++) {
             const dripX = catchingGhost.x + (i - 1) * size * 0.5;
             const dripY =
@@ -1221,11 +1335,12 @@
             );
             ctx.fill();
           }
+          ctx.globalAlpha = 1;
 
           ctx.shadowBlur = 0;
 
-          // Eyes (red/pink)
-          ctx.fillStyle = "#f00";
+          // Eyes
+          ctx.fillStyle = ghostType.eyeColor;
           ctx.beginPath();
           ctx.arc(
             catchingGhost.x - size * 0.3,
@@ -1243,26 +1358,28 @@
           );
           ctx.fill();
 
-          // Pupils
-          ctx.fillStyle = "#000";
-          ctx.beginPath();
-          ctx.arc(
-            catchingGhost.x - size * 0.3,
-            catchingGhost.y - size * 0.2,
-            size * 0.08,
-            0,
-            Math.PI * 2
-          );
-          ctx.arc(
-            catchingGhost.x + size * 0.3,
-            catchingGhost.y - size * 0.2,
-            size * 0.08,
-            0,
-            Math.PI * 2
-          );
-          ctx.fill();
+          // Pupils (except for Ancient Spirit which has black eyes)
+          if (ghostType.eyeColor !== "#000") {
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.arc(
+              catchingGhost.x - size * 0.3,
+              catchingGhost.y - size * 0.2,
+              size * 0.08,
+              0,
+              Math.PI * 2
+            );
+            ctx.arc(
+              catchingGhost.x + size * 0.3,
+              catchingGhost.y - size * 0.2,
+              size * 0.08,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+          }
 
-          // Mouth (big and hungry)
+          // Mouth
           ctx.strokeStyle = "#000";
           ctx.lineWidth = 2;
           ctx.fillStyle = "#000";
@@ -1278,19 +1395,16 @@
           );
           ctx.fill();
 
-          // Tongue
-          ctx.fillStyle = "#f0a";
-          ctx.beginPath();
-          ctx.ellipse(
+          // Display ghost name and reward
+          ctx.restore();
+          ctx.fillStyle = "#ff0";
+          ctx.font = "bold 14px Courier New";
+          ctx.textAlign = "center";
+          ctx.fillText(
+            `${ghostType.name} - ${ghostType.reward}`,
             catchingGhost.x,
-            catchingGhost.y + size * 0.4,
-            size * 0.3,
-            size * 0.1,
-            0,
-            0,
-            Math.PI
+            catchingGhost.y - size - 20
           );
-          ctx.fill();
 
           ctx.restore();
 
@@ -1356,7 +1470,8 @@
 
           // Show trap button when ghost is weak
           const trapButton = document.getElementById("trapButton");
-          if (catchingGhost.health < 30 && !ghostTrap.deployed) {
+          const weakThreshold = catchingGhost.maxHealth * 0.3;
+          if (catchingGhost.health < weakThreshold && !ghostTrap.deployed) {
             trapButton.classList.add("visible");
           } else if (ghostTrap.deployed) {
             trapButton.classList.remove("visible");
@@ -1367,7 +1482,8 @@
       }
 
       function deployTrap() {
-        if (catchingGhost && catchingGhost.health < 30) {
+        const weakThreshold = catchingGhost.maxHealth * 0.3;
+        if (catchingGhost && catchingGhost.health < weakThreshold) {
           playSound(220, 0.3);
           ghostTrap.deployed = true;
 
@@ -1407,7 +1523,17 @@
         );
 
         if (distance < 50) {
-          catchingGhost.health -= 2;
+          // Damage based on equipment
+          let damage = 1;
+          if (gameState.equipment.beam) {
+            damage = 2;
+          }
+
+          // Harder ghosts take less damage
+          const resistanceFactor = 1 - (catchingGhost.type.speed - 4) * 0.1;
+          damage *= resistanceFactor;
+
+          catchingGhost.health -= damage;
           playSound(440, 0.05);
 
           // Slow down ghost when hit
@@ -1415,21 +1541,22 @@
           catchingGhost.vy *= 0.95;
 
           // Pull ghost down slightly when weak
-          if (catchingGhost.health < 50) {
+          if (catchingGhost.health < catchingGhost.maxHealth * 0.5) {
             catchingGhost.vy += 0.2;
           }
         }
       }
 
       function ghostCaptured() {
+        const reward = catchingGhost.type.reward;
         playSound(880, 0.3);
         gameState.ghosts++;
-        gameState.money += 500;
+        gameState.money += reward;
 
         if (gameState.ghosts >= gameState.maxGhosts) {
           gameOver();
         } else {
-          alert("Ghost captured! +$500");
+          alert(`${catchingGhost.type.name} captured! +${reward}`);
           exitCatch();
         }
       }
